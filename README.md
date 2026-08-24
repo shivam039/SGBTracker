@@ -105,7 +105,7 @@ changes.
 │  <your real provider here>       ─┘         write IngestionRun,     │
 │                                              evaluate alerts         │
 │                                                                       │
-│  Prisma ORM ──► SQLite (dev/personal) or Postgres (hosted)          │
+│  Prisma ORM ──► Postgres (Neon free tier, or any hosted Postgres)    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -113,10 +113,12 @@ changes.
   for charts. Client components fetch from the API routes.
 - **Backend**: Next.js Route Handlers (`src/app/api/**`) — no separate
   server process needed.
-- **Database**: SQLite via Prisma for zero-config local/personal use.
-  Swapping to Postgres is a one-line `provider` change in
-  `prisma/schema.prisma` plus a `DATABASE_URL` — no application code
-  depends on the engine.
+- **Database**: Postgres via Prisma. Deployed on [Neon](https://neon.tech)'s
+  free tier so both local dev and the Vercel deployment point at the same
+  kind of database (Vercel's serverless functions have no writable local
+  disk, which rules out SQLite for hosting). Swapping to another Postgres
+  host, or a different engine entirely, is a `provider`/`DATABASE_URL`
+  change in `prisma/schema.prisma` — no application code depends on it.
 - **Market-data ingestion**: `src/lib/ingest.ts` — one function
   (`runIngestion`) that fetches from the configured provider, upserts
   tranche master data, appends a price snapshot + gold price snapshot,
@@ -131,7 +133,7 @@ changes.
   `schedule:` workflow doing `curl`, or a plain OS cron job. Not baked into
   the app process itself, to keep the deployable simple and
   platform-agnostic.
-- **Caching**: none beyond SQLite itself — the dataset is small (dozens of
+- **Caching**: none beyond Postgres itself — the dataset is small (dozens of
   tranches, one row per session) and query cost is negligible for a
   personal app. Every API response also carries a `freshness` block so the
   UI can show a "data may be stale" banner instead of silently caching
@@ -214,17 +216,19 @@ All routes are under `/api`, JSON in/out.
 
 ## Setup
 
-Requires Node.js 20+.
+Requires Node.js 20+ and a Postgres database — a free
+[Neon](https://neon.tech) project takes under a minute to create and gives
+you a `DATABASE_URL` to paste in.
 
 ```bash
 npm install
-cp .env.example .env          # defaults work as-is (SQLite, mock provider)
-npm run db:migrate            # create the SQLite database + tables
+cp .env.example .env          # then fill in DATABASE_URL (see above) and CRON_SECRET
+npm run db:migrate            # apply migrations (creates the tables)
 npm run db:seed               # load ~3 weeks of sample history + sample alert rules
 npm run dev                   # http://localhost:3000
 ```
 
-Run the test suite:
+Run the test suite (pure calculation-engine tests, no database needed):
 
 ```bash
 npm test
@@ -237,33 +241,47 @@ npx tsc --noEmit
 npm run lint
 ```
 
-Reset the local database at any time with `npm run db:reset` (re-runs
-migrations + seed).
+Reset the database at any time with `npm run db:reset` (re-runs migrations
++ seed — **destructive**, drops all data first).
 
 ---
 
 ## Deployment
 
-The app is a standard Next.js app — deploy it anywhere Next.js runs
-(Vercel is simplest). Two things need attention:
+Deployed at **https://sgbtracker.vercel.app** (Vercel, auto-deploying from
+this repo's default branch; database is a Neon Postgres project). To deploy
+your own copy:
 
-1. **Database**: SQLite is fine for a single-instance personal deployment
-   with a persistent volume, but most serverless hosts (Vercel included)
-   don't offer persistent local disk. For those, switch
-   `prisma/schema.prisma`'s datasource `provider` to `"postgresql"`, point
-   `DATABASE_URL` at a hosted Postgres instance (Neon, Supabase, Render,
-   etc.), and run `npx prisma migrate deploy`.
-2. **Scheduler**: nothing refreshes data on its own — call `POST
-   /api/refresh` on a schedule:
-   - **Vercel Cron**: add a `vercel.json` cron entry hitting
-     `/api/refresh` with the `CRON_SECRET` header.
-   - **GitHub Actions**: a `schedule:` workflow running
-     `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://your-app/api/refresh`.
-   - Any other scheduler that can make an authenticated HTTP POST works
-     identically.
+1. **Database**: provision a Postgres instance (Neon, Supabase, Render,
+   etc.) and grab its connection string.
+2. **Vercel project**: import this repo in the Vercel dashboard (or `vercel
+   link` / the Vercel MCP `create_git_project` tool) — it auto-detects
+   Next.js. `npm run build` already runs `prisma migrate deploy` before
+   `next build`, so every deploy applies any new migrations automatically.
+3. **Environment variables** (Vercel dashboard → Project → Settings →
+   Environment Variables, scope: all environments):
+   | Key | Value |
+   |---|---|
+   | `DATABASE_URL` | your Postgres connection string |
+   | `CRON_SECRET` | a random secret (`openssl rand -hex 32`) |
+   | `USE_MOCK_PROVIDER` | `true` (until a real provider is wired up) |
+   | `DEFAULT_GOLD_GROWTH_RATE_PCT` | `8` (or your preferred default) |
 
-   Set `CRON_SECRET` in production — without it, `/api/refresh` is
-   unauthenticated.
+   Redeploy after adding them so the build/runtime picks them up.
+4. **Seed data**: run `npm run db:seed` once against the production
+   `DATABASE_URL` (locally, with `.env` pointed at it), or just call `POST
+   /api/refresh` on the live URL once — the app will otherwise start empty
+   and accumulate one day of data per scheduled refresh.
+5. **Scheduler**: `vercel.json` in this repo already defines a Vercel Cron
+   job hitting `/api/refresh` on weekday evenings; Vercel automatically
+   sends `CRON_SECRET` as the request's Bearer token when that env var is
+   set, matching what `/api/refresh` expects — no extra wiring needed once
+   the env var above is in place. For any other host, point a scheduler
+   (GitHub Actions `schedule:` + `curl`, a plain cron job, etc.) at `POST
+   /api/refresh` with `Authorization: Bearer $CRON_SECRET`.
+
+   `CRON_SECRET` also guards the endpoint from being triggered by anyone
+   who finds the URL — never deploy to production without setting it.
 
 ---
 

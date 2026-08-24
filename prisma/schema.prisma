@@ -1,14 +1,15 @@
 // Prisma schema for SGB Tracker
-// SQLite is used for zero-config local/personal deployment.
-// Swap `provider` to "postgresql" and set DATABASE_URL for a hosted deployment —
-// no application code depends on the specific database engine.
+// Postgres (hosted on Neon) so the app works both locally and deployed on
+// Vercel, which has no writable local filesystem for SQLite. No application
+// code depends on the specific database engine — only this file's
+// `provider`/`url` and DATABASE_URL change if you switch providers again.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
