@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ isin
   ]);
 
   if (!economics || !tranche) {
-    return NextResponse.json({ error: `No tranche found for ISIN ${isin}` }, { status: 404 });
+    return NextResponse.json({ error: `No tranche found for symbol ${isin}` }, { status: 404 });
   }
 
   const [priceHistory, goldHistory] = await Promise.all([

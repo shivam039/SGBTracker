@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   let trancheId: string | null = null;
   if (isin) {
     const tranche = await prisma.tranche.findUnique({ where: { isin } });
-    if (!tranche) return NextResponse.json({ error: `No tranche found for ISIN ${isin}` }, { status: 404 });
+    if (!tranche) return NextResponse.json({ error: `No tranche found for symbol ${isin}` }, { status: 404 });
     trancheId = tranche.id;
   }
 

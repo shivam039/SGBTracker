@@ -157,7 +157,7 @@ Defined in `prisma/schema.prisma`:
 
 | Model | Purpose |
 |---|---|
-| `Tranche` | Master/reference data for one SGB series (ISIN, dates, issue price, coupon rate). Rarely changes. |
+| `Tranche` | Master/reference data for one SGB series (unique symbol/ISIN, dates, issue price, coupon rate). Rarely changes. |
 | `PriceSnapshot` | One point-in-time secondary-market quote per tranche per ingestion run — this *is* the price-history series. Carries `dataQuality`/`isStale`/`staleDays`. |
 | `GoldPriceSnapshot` | Reference gold price (INR/gram, 999 purity) per day. |
 | `IngestionRun` | Audit log of each refresh: provider, status, tranches updated, errors. |
@@ -310,8 +310,11 @@ created.
   return figures assume hold-to-maturity.
 - Transaction-cost assumptions are illustrative defaults, not any specific
   broker's real rates.
-- The mock provider's sample tranches use synthetic ISINs and
+- The mock provider's sample tranches use each tranche's real NSE trading
+  symbol (e.g. a bond maturing June 2029 is `SGBJUN29`, matching the real
+  exchange convention — so it's actually searchable on a broker) but
   approximate — not transcribed — historical issue prices/dates; the
-  *program structure* (8yr maturity, coupon rules, issuance cadence) is
-  accurate, the specific numbers are illustrative. Replace with real
-  reference data before relying on this for actual trading decisions.
+  *program structure* (8yr maturity, coupon rules, issuance cadence,
+  symbol convention) is accurate, the specific numbers and market prices
+  are illustrative. Replace with real reference data before relying on
+  this for actual trading decisions.

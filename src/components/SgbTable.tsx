@@ -56,7 +56,7 @@ export function SgbTable({ items }: { items: SgbEconomicsDto[] }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by series name or ISIN…"
+          placeholder="Search by series name or symbol…"
           className="flex-1 min-w-[200px] rounded-md border px-3 py-1.5 text-sm bg-transparent"
         />
         <label className="flex items-center gap-1.5 text-xs" style={{ color: "var(--muted)" }}>

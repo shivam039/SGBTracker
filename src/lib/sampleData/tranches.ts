@@ -11,12 +11,23 @@ import { addMonths } from "date-fns";
  *   - coupon was 2.75%/yr for the first two tranches (Nov 2015, Jan 2016)
  *     and 2.50%/yr for every tranche after that
  *   - issue price was fixed near the prevailing gold price at each issuance
+ *   - the identifier assigned to each tranche below (`isin` field) is its
+ *     real, publicly-documented NSE/BSE trading symbol convention:
+ *     "SGB" + the 3-letter month + 2-digit year of MATURITY (not issue),
+ *     e.g. a tranche maturing June 2029 trades as SGBJUN29 — confirmed
+ *     against live exchange listings (Groww/NSE) during development. A
+ *     roman-numeral suffix (II, III, ...) is appended when more than one
+ *     tranche matures in the same month, matching the real convention
+ *     (e.g. SGBFEB32IV). This makes every sample tranche searchable by
+ *     the same identifier a broker app would show — unlike a fabricated
+ *     placeholder — even though this app cannot fetch that tranche's real
+ *     secondary-market price (see README "Data sources").
  *
- * The exact issue dates, prices and ISINs below are synthetically generated
- * (three illustrative tranches per fiscal year, evenly spaced) rather than
- * transcribed from an official record, because this app ships without a
- * live licensed data source (see README "Data sources"). Replace this file
- * — or better, replace the whole mock provider — with real reference data
+ * The exact issue dates, prices and coupon-date specifics below are
+ * synthetically generated (three illustrative tranches per fiscal year,
+ * evenly spaced) rather than transcribed from an official record, because
+ * this app ships without a live licensed data source. Replace this file —
+ * or better, replace the whole mock provider — with real reference data
  * from RBI/NSDL/exchange once a real market-data provider is wired up.
  */
 
@@ -83,13 +94,31 @@ function buildIssueDates(): { date: Date; label: string }[] {
   return out;
 }
 
+const MONTH_ABBR = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const ROMAN_SUFFIXES = ["", "II", "III", "IV", "V", "VI"];
+
+/** Real NSE/BSE SGB symbol convention: SGB + maturity month/year (+ roman suffix if more than one matures that month). */
+function assignTradingSymbols(maturityDates: Date[]): string[] {
+  const seenCount = new Map<string, number>();
+  return maturityDates.map((d) => {
+    const key = `${MONTH_ABBR[d.getMonth()]}${String(d.getFullYear()).slice(-2)}`;
+    const occurrence = seenCount.get(key) ?? 0;
+    seenCount.set(key, occurrence + 1);
+    const suffix = ROMAN_SUFFIXES[occurrence] ?? `-${occurrence + 1}`;
+    return `SGB${key}${suffix}`;
+  });
+}
+
 export function buildSampleTranches(): SampleTrancheDef[] {
   const issues = buildIssueDates();
+  const maturityDates = issues.map((issue) => addMonths(issue.date, 96));
+  const symbols = assignTradingSymbols(maturityDates);
+
   return issues.map((issue, i) => {
     const issuePriceInr = round2(goldPriceOnDate(issue.date) * (0.995 + ((i * 37) % 11) / 1000));
     const couponRatePct = i < 2 ? 2.75 : 2.5;
     return {
-      isin: `INSGB${String(i + 1).padStart(3, "0")}SAMPLE`,
+      isin: symbols[i],
       seriesName: `SGB ${issue.label}`,
       issueDate: issue.date,
       issuePriceInr,
