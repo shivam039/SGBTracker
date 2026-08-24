@@ -1,0 +1,120 @@
+// Prisma schema for SGB Tracker
+// SQLite is used for zero-config local/personal deployment.
+// Swap `provider` to "postgresql" and set DATABASE_URL for a hosted deployment —
+// no application code depends on the specific database engine.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Master record for one SGB tranche/series (identified by ISIN).
+/// This is reference data: it almost never changes once a tranche is issued.
+model Tranche {
+  id             String   @id @default(cuid())
+  isin           String   @unique
+  seriesName     String // e.g. "SGB 2018-19 Series I"
+  issueDate      DateTime
+  maturityDate   DateTime // issueDate + 8 years
+  earlyExitFrom  DateTime // issueDate + 5 years — first RBI-permitted early redemption window
+  issuePriceInr  Float // issue price per unit (1 gram) in INR, fixed at issuance
+  couponRatePct  Float // fixed annual coupon, paid semi-annually (2.50% for most tranches, 2.75% for the first two)
+  issueSizeUnits Float? // total units issued in the tranche, if known (grams)
+  status         String   @default("ACTIVE") // ACTIVE | MATURED | DELISTED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  priceSnapshots PriceSnapshot[]
+  alertRules     AlertRule[]
+  alertEvents    AlertEvent[]
+
+  @@index([status])
+  @@index([maturityDate])
+}
+
+/// One point-in-time secondary-market data point for a tranche.
+/// A new row is written on every ingestion run (see IngestionRun), so this
+/// table doubles as the price-history series shown on the detail page.
+model PriceSnapshot {
+  id              String        @id @default(cuid())
+  trancheId       String
+  tranche         Tranche       @relation(fields: [trancheId], references: [id], onDelete: Cascade)
+  asOf            DateTime // exchange trade/quote date this snapshot represents
+  lastTradedPrice Float?
+  bidPrice        Float?
+  askPrice        Float?
+  volumeUnits     Float? // units (grams) traded that session, if reported
+  numTrades       Int?
+  exchange        String // NSE | BSE | MOCK
+  source          String // provider identifier, e.g. "mock-provider", "nse-bhavcopy"
+  isStale         Boolean       @default(false) // true if asOf is older than the configured freshness threshold
+  staleDays       Int           @default(0)
+  dataQuality     String        @default("OK") // OK | LOW_LIQUIDITY | WIDE_SPREAD | STALE | NO_TRADE | SUSPECT
+  ingestionRunId  String?
+  ingestionRun    IngestionRun? @relation(fields: [ingestionRunId], references: [id])
+  createdAt       DateTime      @default(now())
+
+  @@index([trancheId, asOf])
+  @@index([asOf])
+}
+
+/// Reference gold price used for discount/premium and redemption-value math.
+/// Methodology mirrors RBI's: simple average of closing price for 999-purity
+/// gold published by IBJA over the preceding 3 business days (approximated
+/// here — see README "Gold reference price" section for the exact caveat).
+model GoldPriceSnapshot {
+  id           String   @id @default(cuid())
+  asOf         DateTime @unique
+  pricePerGram Float // INR per gram, 999 purity
+  source       String
+  createdAt    DateTime @default(now())
+}
+
+/// Audit log of each data-refresh job (scheduled or manual).
+model IngestionRun {
+  id              String    @id @default(cuid())
+  provider        String
+  startedAt       DateTime  @default(now())
+  finishedAt      DateTime?
+  status          String    @default("RUNNING") // RUNNING | SUCCESS | PARTIAL | FAILED
+  tranchesUpdated Int       @default(0)
+  errorCount      Int       @default(0)
+  errors          String? // JSON-encoded array of error messages
+  notes           String?
+
+  priceSnapshots PriceSnapshot[]
+}
+
+/// A user-configured alert condition, evaluated after every ingestion run.
+model AlertRule {
+  id             String   @id @default(cuid())
+  type           String // DISCOUNT_BELOW | YTM_ABOVE | PRICE_BELOW | SPREAD_BELOW | NEW_CHEAPEST
+  trancheId      String? // null = applies to all tranches
+  tranche        Tranche? @relation(fields: [trancheId], references: [id], onDelete: Cascade)
+  thresholdValue Float? // meaning depends on `type` (percent or INR)
+  isActive       Boolean  @default(true)
+  label          String?
+  createdAt      DateTime @default(now())
+
+  events AlertEvent[]
+}
+
+/// A concrete firing of an AlertRule, kept as a durable notification feed.
+model AlertEvent {
+  id             String    @id @default(cuid())
+  alertRuleId    String
+  alertRule      AlertRule @relation(fields: [alertRuleId], references: [id], onDelete: Cascade)
+  trancheId      String?
+  tranche        Tranche?  @relation(fields: [trancheId], references: [id], onDelete: Cascade)
+  message        String
+  valueAtTrigger Float?
+  triggeredAt    DateTime  @default(now())
+  acknowledged   Boolean   @default(false)
+
+  @@index([triggeredAt])
+  @@index([acknowledged])
+}
