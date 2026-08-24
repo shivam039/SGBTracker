@@ -248,9 +248,9 @@ Reset the database at any time with `npm run db:reset` (re-runs migrations
 
 ## Deployment
 
-Deployed at **https://sgbtracker.vercel.app** (Vercel, auto-deploying from
-this repo's default branch; database is a Neon Postgres project). To deploy
-your own copy:
+Deployed at **https://sgbtracker-shivam-dixits-projects-6af37175.vercel.app**
+(Vercel, auto-deploying from this repo's `main` branch; database is a Neon
+Postgres project). To deploy your own copy:
 
 1. **Database**: provision a Postgres instance (Neon, Supabase, Render,
    etc.) and grab its connection string.
