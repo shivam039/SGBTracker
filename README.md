@@ -310,11 +310,21 @@ created.
   return figures assume hold-to-maturity.
 - Transaction-cost assumptions are illustrative defaults, not any specific
   broker's real rates.
-- The mock provider's sample tranches use each tranche's real NSE trading
-  symbol (e.g. a bond maturing June 2029 is `SGBJUN29`, matching the real
-  exchange convention — so it's actually searchable on a broker) but
-  approximate — not transcribed — historical issue prices/dates; the
-  *program structure* (8yr maturity, coupon rules, issuance cadence,
-  symbol convention) is accurate, the specific numbers and market prices
-  are illustrative. Replace with real reference data before relying on
+- Tranche identity is real, not synthetic: all 56 tranches in
+  `src/lib/sampleData/realTranches.ts` (FY2017-18 through FY2023-24) —
+  their true NSE symbol, official RBI series name, and maturity month/year
+  — were sourced from live secondary-market data via the INDmoney MCP
+  connector, a one-time snapshot captured 2026-08-25 (not an automated
+  feed — see "Data sources" above for why). The very first two fiscal
+  years (2015-16, 2016-17) aren't included: those tranches had already
+  matured and dropped out of that data source's live-trading search index
+  by the time this snapshot was taken.
+- Still approximate: exact issue day-of-month (only month/year is encoded
+  in the real symbol, so both issue and maturity dates are fixed at the
+  5th), and issue price (not exposed by the data source, modeled from an
+  illustrative gold-price curve). Each active tranche's current price
+  starts from its real captured value and then follows a small simulated
+  daily walk — see `mockProvider.ts` — so it drifts further from reality
+  the longer this snapshot goes unrefreshed. Re-run the INDmoney pull
+  (or wire up a real provider per "Extending" below) before relying on
   this for actual trading decisions.
