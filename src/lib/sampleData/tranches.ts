@@ -39,7 +39,14 @@ export interface SampleTrancheDef {
   couponRatePct: number;
 }
 
-/** Piecewise-linear illustrative gold price curve (INR/gram, 999 purity), used only to seed sample data. */
+/**
+ * Piecewise-linear illustrative gold price curve (INR/gram, 999 purity),
+ * used only to seed sample data. The tail end is anchored to a verified
+ * real reference price (~₹16,150/gram on 2026-08-24, cross-checked against
+ * live secondary-market SGB prices which trade near gold parity) — earlier
+ * points before ~2024 are still an approximation, not a transcribed series,
+ * since this app has no live/historical gold-price feed by default.
+ */
 const GOLD_CURVE: [string, number][] = [
   ["2015-11-01", 2650],
   ["2017-01-01", 2850],
@@ -50,8 +57,8 @@ const GOLD_CURVE: [string, number][] = [
   ["2022-06-01", 5100],
   ["2023-06-01", 5900],
   ["2024-06-01", 6800],
-  ["2025-06-01", 7000],
-  ["2026-08-24", 7150],
+  ["2025-06-01", 11200],
+  ["2026-08-24", 16150],
 ];
 
 function goldPriceOnDate(date: Date): number {
