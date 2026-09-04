@@ -285,6 +285,42 @@ Postgres project). To deploy your own copy:
 
 ---
 
+## Publishing as an Android app (Indus Appstore / Oppo App Market)
+
+The app is a installable PWA (`app/manifest.ts`, `public/sw.js`, icons in
+`public/icons/`) — Lighthouse's installability checks (manifest + icons +
+service worker + HTTPS) all pass against the deployed URL. That's the one
+artifact both stores below need; skip Google Play and Apple App Store
+entirely since neither was requested. Registration is free on both:
+
+- **Indus Appstore** (PhonePe, India-focused): free developer registration,
+  free app listing for the first year, 0% commission — [developer
+  portal](https://developer.indusappstore.com/).
+- **Oppo App Market**: free developer registration — [developer
+  portal](https://developers.oppomobile.com/).
+
+Steps:
+
+1. **Package it**: go to [pwabuilder.com](https://www.pwabuilder.com), enter
+   `https://sgbtracker.vercel.app`, and generate an Android package (it
+   reads the manifest above automatically). This produces a signed
+   `.aab`/`.apk` and a signing-key fingerprint — PWABuilder's own flow
+   generates and holds that keystore, so do this step yourself rather than
+   asking an AI agent to hold app-signing credentials.
+2. **Verify domain ownership**: PWABuilder gives you the content for
+   `/.well-known/assetlinks.json` (it needs your package's real SHA-256
+   signing fingerprint, which only exists after step 1) — add that file to
+   this repo at `public/.well-known/assetlinks.json` and redeploy, so the
+   installed app opens as a full-screen app instead of a browser tab.
+3. **Submit** the generated package to each store's developer portal
+   (signup → create app listing → upload package → store listing assets
+   [icon, screenshots, description] → privacy policy URL → submit for
+   review).
+4. A **privacy policy page** is required by both stores — this repo
+   doesn't ship one; add a short one (what data the app collects — none
+   beyond localStorage for alert-rule/admin-secret preferences — and that
+   it's not investment advice) before submitting.
+
 ## Extending to a real data provider
 
 1. Implement `MarketDataProvider` (`src/lib/providers/types.ts`) —
