@@ -48,7 +48,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-6">{children}</main>
         <footer className="border-t text-xs py-4 px-6" style={{ color: "var(--muted)" }}>
           Educational tool, not investment advice. Prices may be simulated sample data — always
-          check the data-freshness banner before acting on any figure shown here.
+          check the data-freshness banner before acting on any figure shown here.{" "}
+          <Link href="/privacy" className="underline">
+            Privacy policy
+          </Link>
         </footer>
       </body>
     </html>

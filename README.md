@@ -316,10 +316,10 @@ Steps:
    (signup → create app listing → upload package → store listing assets
    [icon, screenshots, description] → privacy policy URL → submit for
    review).
-4. A **privacy policy page** is required by both stores — this repo
-   doesn't ship one; add a short one (what data the app collects — none
-   beyond localStorage for alert-rule/admin-secret preferences — and that
-   it's not investment advice) before submitting.
+4. A **privacy policy page** is required by both stores — this repo ships
+   one at `/privacy` (linked from the footer on every page), live at
+   `https://sgbtracker.vercel.app/privacy`. Use that URL directly in each
+   store's submission form.
 
 ## Extending to a real data provider
 
