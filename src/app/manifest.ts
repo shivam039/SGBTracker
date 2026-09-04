@@ -11,6 +11,8 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "en",
     dir: "ltr",
     display: "standalone",
+    display_override: ["standalone", "minimal-ui"],
+    launch_handler: { client_mode: "navigate-existing" },
     background_color: "#f7f8fa",
     theme_color: "#14181f",
     orientation: "portrait-primary",
