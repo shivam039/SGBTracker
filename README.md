@@ -301,25 +301,38 @@ entirely since neither was requested. Registration is free on both:
 
 Steps:
 
-1. **Package it**: go to [pwabuilder.com](https://www.pwabuilder.com), enter
-   `https://sgbtracker.vercel.app`, and generate an Android package (it
-   reads the manifest above automatically). This produces a signed
-   `.aab`/`.apk` and a signing-key fingerprint — PWABuilder's own flow
-   generates and holds that keystore, so do this step yourself rather than
-   asking an AI agent to hold app-signing credentials.
-2. **Verify domain ownership**: PWABuilder gives you the content for
-   `/.well-known/assetlinks.json` (it needs your package's real SHA-256
-   signing fingerprint, which only exists after step 1) — add that file to
-   this repo at `public/.well-known/assetlinks.json` and redeploy, so the
-   installed app opens as a full-screen app instead of a browser tab.
-3. **Submit** the generated package to each store's developer portal
-   (signup → create app listing → upload package → store listing assets
-   [icon, screenshots, description] → privacy policy URL → submit for
-   review).
-4. A **privacy policy page** is required by both stores — this repo ships
+1. **Package it**: [pwabuilder.com](https://www.pwabuilder.com) generates
+   the Android package (it reads the manifest above automatically) — this
+   was already done once; PWABuilder's own Android build produced an
+   unsigned `.apk`/`.aab` (no signing options selected).
+2. **Sign it**: an unsigned APK can't be installed or submitted anywhere.
+   This one was signed (JAR/v1 signing scheme) with a fresh self-signed
+   25-year app-signing key, generated and applied locally rather than via
+   PWABuilder's own signer — verified independently with `jarsigner
+   -verify`. The signed APK, the `.p12` keystore, and a text file with the
+   password/fingerprint/instructions were sent directly to the app owner
+   (never committed to this repo — it's public). Whoever holds that
+   keystore file can publish updates to this exact app listing, so it must
+   be kept somewhere durable outside this repo.
+3. **Verify domain ownership**: `public/.well-known/assetlinks.json` in
+   this repo is already populated with the real signing certificate's
+   SHA-256 fingerprint (package `app.vercel.sgbtracker.twa`), so the
+   installed app opens as a full-screen app instead of falling back to a
+   browser tab.
+4. **Submit** the signed APK to each store's developer portal (signup →
+   create app listing → upload package → store listing assets [icon,
+   screenshots, description] → privacy policy URL → submit for review).
+   This step needs the app owner's own developer account on each store —
+   it can't be done by an AI agent.
+5. A **privacy policy page** is required by both stores — this repo ships
    one at `/privacy` (linked from the footer on every page), live at
    `https://sgbtracker.vercel.app/privacy`. Use that URL directly in each
    store's submission form.
+
+If you ever regenerate the Android package (e.g. a future PWABuilder run
+after a manifest change), re-sign it with the *same* keystore + password
+so the store treats it as an update rather than a new app — never
+generate a second keystore for this package name.
 
 ## Extending to a real data provider
 

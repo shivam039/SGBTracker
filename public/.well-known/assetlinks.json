@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.sgbtracker.twa",
+      "sha256_cert_fingerprints": [
+        "1D:75:90:2D:39:B9:D4:F4:7A:38:95:74:84:55:B6:B8:9A:A0:47:A5:4F:37:05:78:4C:6E:B3:8F:2D:13:9C:E1"
+      ]
+    }
+  }
+]
