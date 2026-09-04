@@ -104,6 +104,16 @@ model AlertRule {
   events AlertEvent[]
 }
 
+/// A browser's Web Push subscription, registered when a visitor opts in to
+/// notifications from the Alerts page. One row per browser/device.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
 /// A concrete firing of an AlertRule, kept as a durable notification feed.
 model AlertEvent {
   id             String    @id @default(cuid())

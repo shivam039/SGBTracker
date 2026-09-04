@@ -63,11 +63,12 @@ export default function AlertsPage() {
       <div>
         <h1 className="text-xl font-semibold">Alerts</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Rules are checked after every data refresh. There is no email/push delivery in this
-          build — triggered alerts show up in the feed below (see Methodology for how to extend
-          this to real notifications).
+          Rules are checked after every data refresh. Triggered alerts always show up in the feed
+          below — turn on browser notifications too if you want a push alert the moment one fires.
         </p>
       </div>
+
+      <PushNotificationToggle />
 
       <CreateRuleForm tranches={tranches} onCreated={loadAll} />
 
@@ -132,6 +133,119 @@ export default function AlertsPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const buffer = new ArrayBuffer(rawData.length);
+  const view = new Uint8Array(buffer);
+  for (let i = 0; i < rawData.length; i++) view[i] = rawData.charCodeAt(i);
+  return buffer;
+}
+
+function PushNotificationToggle() {
+  const [status, setStatus] = useState<"unsupported" | "unconfigured" | "denied" | "off" | "on" | "checking">(
+    "checking"
+  );
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStatus("unsupported");
+      return;
+    }
+    if (!VAPID_PUBLIC_KEY) {
+      setStatus("unconfigured");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setStatus("denied");
+      return;
+    }
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => setStatus(sub ? "on" : "off"))
+      .catch(() => setStatus("off"));
+  }, []);
+
+  async function enable() {
+    setBusy(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setStatus("denied");
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY!),
+      });
+      const json = sub.toJSON();
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+      });
+      setStatus("on");
+    } catch {
+      setStatus("off");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disable() {
+    setBusy(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      setStatus("off");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (status === "checking") return null;
+  if (status === "unsupported") return null;
+  if (status === "unconfigured") return null;
+
+  return (
+    <div className="rounded-xl border p-3 flex items-center justify-between gap-3 text-sm" style={{ background: "var(--surface)" }}>
+      <div>
+        <div className="font-medium">Browser notifications</div>
+        <div style={{ color: "var(--muted)" }}>
+          {status === "denied"
+            ? "Blocked in your browser's site settings — enable notifications for this site to turn this on."
+            : status === "on"
+              ? "You'll get a push notification the moment an alert fires."
+              : "Get a push notification the moment an alert fires, even if this tab isn't open."}
+        </div>
+      </div>
+      {status !== "denied" && (
+        <button
+          onClick={status === "on" ? disable : enable}
+          disabled={busy}
+          className="text-xs px-3 py-1.5 rounded border hover:bg-black/5 dark:hover:bg-white/10 shrink-0 disabled:opacity-50"
+        >
+          {busy ? "…" : status === "on" ? "Turn off" : "Turn on"}
+        </button>
+      )}
     </div>
   );
 }

@@ -140,8 +140,8 @@ changes.
   something wrong.
 - **Alert system**: `AlertRule` rows evaluated by `src/lib/alerts.ts` at
   the end of every ingestion run; matches become `AlertEvent` rows shown in
-  the `/alerts` feed. No email/push/webhook delivery is wired up — the
-  `AlertEvent` table is the extension point (see "Extending" below).
+  the `/alerts` feed. Optional browser push notifications (Web Push, see
+  below) fire alongside each event; no email/webhook delivery is wired up.
 - **Deployment**: any Node.js host that runs Next.js (Vercel is the path
   of least resistance). See "Deploying" below.
 - **Monitoring/logging**: every ingestion run is logged to
@@ -345,9 +345,43 @@ generate a second keystore for this package name.
 3. Nothing else changes — the calculation engine, API routes, and UI all
    consume `MarketDataProvider` output through the same shape.
 
-To wire real alert delivery (email/push/webhook), hook into
-`evaluateAlerts` in `src/lib/alerts.ts` at the point each `AlertEvent` is
-created.
+Browser push notifications (Web Push) are already wired up — see
+"Browser push notifications" below. To add another delivery channel
+(email/webhook), follow the same pattern: hook into `evaluateAlerts` in
+`src/lib/alerts.ts` at the point each `AlertEvent` is created (see the
+`notifySubscribers(...)` calls already there).
+
+---
+
+## Browser push notifications
+
+Alert rules can push a native browser notification the moment they fire,
+via the [Web Push API](https://developer.mozilla.org/en-US/docs/Web/API/Push_API)
+— no third-party notification service, just VAPID-signed pushes sent
+directly from `src/lib/push.ts`. Off by default; turns on per-browser from
+a toggle on the `/alerts` page.
+
+Setup:
+
+1. Generate a VAPID key pair: `npx web-push generate-vapid-keys`.
+2. Set three env vars (locally in `.env`, and on Vercel under Project →
+   Settings → Environment Variables):
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — the public key (safe to expose; it's
+     bundled into the client).
+   - `VAPID_PRIVATE_KEY` — the private key (server-only, keep secret).
+   - `VAPID_SUBJECT` — a `mailto:` or `https:` URL identifying who's
+     sending the pushes (required by the Web Push spec).
+3. Redeploy. The "Browser notifications" toggle on `/alerts` only appears
+   once `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is set — until then the feature is
+   fully absent client-side, and `notifySubscribers()` server-side is a
+   silent no-op so alert evaluation is never affected either way.
+
+How it works: `PushSubscription` rows (one per opted-in browser) are
+created via `POST /api/push/subscribe` when a visitor clicks "Turn on",
+and removed automatically if the push service reports the subscription as
+expired (HTTP 404/410) the next time a send is attempted. The service
+worker (`public/sw.js`) handles the `push` event (shows the notification)
+and `notificationclick` (focuses or opens `/alerts`).
 
 ---
 

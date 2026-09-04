@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { pickCheapest, SgbEconomics } from "./calc";
+import { notifySubscribers } from "./push";
 
 /**
  * Evaluates every active AlertRule against the latest computed economics and
@@ -36,14 +37,16 @@ export async function evaluateAlerts(all: SgbEconomics[]): Promise<number> {
       const cheapestTranche = await prisma.tranche.findUnique({ where: { isin: cheapest.isin } });
       if (!cheapestTranche) continue;
       if (lastEvent?.trancheId === cheapestTranche.id) continue; // unchanged, don't re-fire
+      const message = `${cheapest.seriesName} (${cheapest.isin}) is now the cheapest SGB by YTM (${cheapest.ytmFlatPct?.toFixed(2)}%).`;
       await prisma.alertEvent.create({
         data: {
           alertRuleId: rule.id,
           trancheId: cheapestTranche.id,
-          message: `${cheapest.seriesName} (${cheapest.isin}) is now the cheapest SGB by YTM (${cheapest.ytmFlatPct?.toFixed(2)}%).`,
+          message,
           valueAtTrigger: cheapest.ytmFlatPct ?? undefined,
         },
       });
+      await notifySubscribers("New cheapest SGB", message).catch(() => {});
       firedCount++;
       continue;
     }
@@ -68,6 +71,7 @@ export async function evaluateAlerts(all: SgbEconomics[]): Promise<number> {
           valueAtTrigger: trigger.value,
         },
       });
+      await notifySubscribers(rule.label || "SGB Tracker alert", trigger.message).catch(() => {});
       firedCount++;
     }
   }

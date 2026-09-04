@@ -39,3 +39,35 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(request).then((cached) => cached ?? Response.error()))
   );
 });
+
+// Alert-rule push notifications (see src/lib/push.ts for the sending side).
+self.addEventListener("push", (event) => {
+  let data = { title: "SGB Tracker", body: "An alert fired.", url: "/alerts" };
+  try {
+    data = { ...data, ...event.data.json() };
+  } catch {
+    // no-op: fall back to the default text above
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: data.url },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? "/alerts";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(url) && "focus" in client) return client.focus();
+      }
+      return self.clients.openWindow(url);
+    })
+  );
+});
