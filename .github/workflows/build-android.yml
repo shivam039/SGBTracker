@@ -42,11 +42,6 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install required Android SDK packages
-        run: |
-          yes | sdkmanager --sdk_root="$ANDROID_HOME" \
-            "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null
-
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
