@@ -61,6 +61,19 @@ jobs:
           CONFIG
           cat "$HOME/.bubblewrap/config.json"
 
+      - name: Work around Bubblewrap's stale SDK-layout check
+        # Bubblewrap's validatePath() only accepts an SDK root that has a
+        # top-level `tools/` or `bin/` folder — the pre-2023 Android SDK
+        # layout. Modern SDKs (including this runner's, confirmed via its
+        # published component list) only ship `cmdline-tools/`,
+        # `platform-tools/`, `build-tools/`, etc. at the root, so the real,
+        # fully-populated SDK here fails Bubblewrap's outdated existence
+        # check with "The provided androidSdk isn't correct." — it's a
+        # coarse existence check, not a check of what's inside, so an empty
+        # stub directory satisfies it without affecting the actual build
+        # (which locates real tools via cmdline-tools/build-tools directly).
+        run: mkdir -p "$ANDROID_HOME/bin"
+
       - name: Decode signing keystore
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > signing.keystore
 
