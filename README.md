@@ -329,8 +329,11 @@ keystore file (never re-run key generation — it must be this exact file,
 or the store will treat rebuilds as a different app):
 
 ```sh
-# macOS/Linux
-base64 -w0 sgbtracker-release-keystore.p12 | pbcopy   # or > keystore.b64.txt
+# Linux (GNU base64)
+base64 -w0 sgbtracker-release-keystore.p12 > keystore.b64.txt
+
+# macOS (BSD base64 has no -w0 flag — strip its line breaks instead)
+base64 -i sgbtracker-release-keystore.p12 | tr -d '\n' > keystore.b64.txt
 
 # Windows PowerShell
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("sgbtracker-release-keystore.p12")) | Set-Clipboard
@@ -343,6 +346,26 @@ push a build to Indus Appstore. Every run also uploads the signed
 publish — useful for Oppo App Market, which this workflow doesn't submit
 to automatically (no equivalent GitHub Action exists for it yet; download
 the artifact and upload it through Oppo's developer portal by hand).
+
+**Important**: Indus Appstore's upload API is an "upgrade" endpoint — it
+only accepts builds for an app that already exists in their system. The
+*first* submission for a new package ID has to be created manually
+through [developer.indusappstore.com](https://developer.indusappstore.com)
+(app details, category, screenshots, privacy policy URL, first AAB
+upload). Only after that initial listing exists will `publish: true` on
+this workflow succeed for subsequent versions.
+
+### Screenshots
+
+`.github/workflows/screenshots.yml` captures real screenshots of the live
+app (dashboard, alerts, a wide desktop view) using Playwright, on the same
+GitHub runners as the Android build — this sandbox's dev environment
+can't do this itself, since it has no database connectivity to render a
+real dashboard locally (see `scripts/capture-screenshots.mjs`). Trigger it
+manually from the **Actions** tab whenever you want fresh ones; it commits
+the PNGs to `public/screenshots/` (already wired into `app/manifest.ts`)
+and also uploads them as a downloadable artifact for pasting into app
+store listing forms, which don't accept screenshots via API.
 
 ### Manual path (fallback)
 
