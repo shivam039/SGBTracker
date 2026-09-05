@@ -75,7 +75,7 @@ jobs:
 
       - name: Publish to Indus Appstore
         if: ${{ inputs.publish }}
-        uses: yogeshpaliyal/upload-indus-appstore@v1
+        uses: yogeshpaliyal/upload-indus-appstore@v0.0.7
         with:
           type: "UPLOAD_AAB"
           apiKey: ${{ secrets.INDUS_API_KEY }}
