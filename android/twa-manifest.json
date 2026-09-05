@@ -1,0 +1,45 @@
+{
+  "packageId": "app.vercel.sgbtracker.twa",
+  "host": "sgbtracker.vercel.app",
+  "name": "SGB Tracker",
+  "launcherName": "SGB Tracker",
+  "display": "standalone",
+  "themeColor": "#14181f",
+  "themeColorDark": "#14181f",
+  "navigationColor": "#14181f",
+  "navigationColorDark": "#14181f",
+  "navigationDividerColor": "#14181f",
+  "navigationDividerColorDark": "#14181f",
+  "backgroundColor": "#f7f8fa",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://sgbtracker.vercel.app/icons/icon-512.png",
+  "maskableIconUrl": "https://sgbtracker.vercel.app/icons/icon-512-maskable.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./signing.keystore",
+    "alias": "sgbtracker"
+  },
+  "appVersionName": "1",
+  "appVersionCode": 1,
+  "shortcuts": [
+    { "name": "Dashboard", "shortName": "Dashboard", "url": "/", "chosenIconUrl": "https://sgbtracker.vercel.app/icons/icon-192.png" },
+    { "name": "Alerts", "shortName": "Alerts", "url": "/alerts", "chosenIconUrl": "https://sgbtracker.vercel.app/icons/icon-192.png" }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://sgbtracker.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": { "enabled": false },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [
+    { "value": "1D:75:90:2D:39:B9:D4:F4:7A:38:95:74:84:55:B6:B8:9A:A0:47:A5:4F:37:05:78:4C:6E:B3:8F:2D:13:9C:E1" }
+  ],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersion": "1"
+}

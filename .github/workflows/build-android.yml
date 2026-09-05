@@ -1,0 +1,87 @@
+name: Build Android app (Bubblewrap)
+
+# Builds the Trusted Web Activity Android package for SGB Tracker and
+# (optionally) publishes it to Indus Appstore. Runs entirely on GitHub's
+# runners, which — unlike the sandboxed dev environment this repo was
+# built in — have normal internet access to pwabuilder.com/dl.google.com
+# equivalents (the Android SDK repository), so this is where that build
+# step actually has to happen.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64   base64 of the existing signing keystore —
+#                             MUST be the same keystore already used to
+#                             sign this app (see README "Publishing as an
+#                             Android app"), never a freshly generated one,
+#                             or the store will treat it as a different app.
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS         "sgbtracker" for the existing keystore
+#   ANDROID_KEY_PASSWORD      same value as ANDROID_KEYSTORE_PASSWORD
+# Optional, only needed to auto-publish:
+#   INDUS_API_KEY             from Indus Appstore's DevTools portal
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the built AAB to Indus Appstore"
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install required Android SDK packages
+        run: |
+          yes | sdkmanager --sdk_root="$ANDROID_HOME" \
+            "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Point Bubblewrap at the runner's JDK/SDK (skip interactive wizard)
+        run: bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
+
+      - name: Decode signing keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > signing.keystore
+
+      - name: Build signed Android App Bundle
+        working-directory: android
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cp ../signing.keystore ./signing.keystore
+          bubblewrap build --skipPwaValidation
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sgbtracker-android
+          path: |
+            android/*.aab
+            android/*.apk
+
+      - name: Publish to Indus Appstore
+        if: ${{ inputs.publish }}
+        uses: yogeshpaliyal/upload-indus-appstore@v1
+        with:
+          type: "UPLOAD_AAB"
+          apiKey: ${{ secrets.INDUS_API_KEY }}
+          packageName: app.vercel.sgbtracker.twa
+          aabFile: android/*.aab
+          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystoreAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          keystorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}

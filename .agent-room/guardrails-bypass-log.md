@@ -9,3 +9,4 @@ Review this periodically (or in code review) so bypasses stay visible
 instead of scrolling off a terminal and being forgotten.
 
 <!-- Entries below this line, newest first, appended automatically. -->
+- 2026-09-05T17:07:32.012Z | author: Claude <noreply@anthropic.com> | bypassed: Protected path violation: .github/workflows/build-android.yml

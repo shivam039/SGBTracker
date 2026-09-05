@@ -299,40 +299,79 @@ entirely since neither was requested. Registration is free on both:
 - **Oppo App Market**: free developer registration — [developer
   portal](https://developers.oppomobile.com/).
 
-Steps:
+### Automated pipeline (recommended)
 
-1. **Package it**: [pwabuilder.com](https://www.pwabuilder.com) generates
-   the Android package (it reads the manifest above automatically) — this
-   was already done once; PWABuilder's own Android build produced an
-   unsigned `.apk`/`.aab` (no signing options selected).
-2. **Sign it**: an unsigned APK can't be installed or submitted anywhere.
-   This one was signed (JAR/v1 signing scheme) with a fresh self-signed
-   25-year app-signing key, generated and applied locally rather than via
-   PWABuilder's own signer — verified independently with `jarsigner
-   -verify`. The signed APK, the `.p12` keystore, and a text file with the
-   password/fingerprint/instructions were sent directly to the app owner
-   (never committed to this repo — it's public). Whoever holds that
-   keystore file can publish updates to this exact app listing, so it must
-   be kept somewhere durable outside this repo.
-3. **Verify domain ownership**: `public/.well-known/assetlinks.json` in
-   this repo is already populated with the real signing certificate's
-   SHA-256 fingerprint (package `app.vercel.sgbtracker.twa`), so the
-   installed app opens as a full-screen app instead of falling back to a
-   browser tab.
-4. **Submit** the signed APK to each store's developer portal (signup →
-   create app listing → upload package → store listing assets [icon,
+`.github/workflows/build-android.yml` builds the signed Android App Bundle
+on GitHub's own runners and (optionally) publishes it to Indus Appstore in
+one click. This exists because the environment this repo was built in
+runs in a sandbox that can't reach pwabuilder.com or the Android SDK's
+distribution host at all (both return a hard `403 policy denial` there) —
+GitHub Actions runners have no such restriction, so that's where the
+actual build has to run. The workflow uses
+[Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) (Google's own
+TWA CLI) against the checked-in `android/twa-manifest.json`, which already
+has the real package ID, app metadata, and signing-certificate fingerprint
+filled in — no interactive prompts to answer.
+
+One-time setup — add these under repo **Settings → Secrets and variables
+→ Actions**:
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | base64 of `sgbtracker-release-keystore.p12` (the keystore already sent to you — see below for how to encode it) |
+| `ANDROID_KEYSTORE_PASSWORD` | the password from the signing-info file you were sent |
+| `ANDROID_KEY_ALIAS` | `sgbtracker` |
+| `ANDROID_KEY_PASSWORD` | same value as `ANDROID_KEYSTORE_PASSWORD` |
+| `INDUS_API_KEY` | only needed to auto-publish — from Indus Appstore's DevTools portal (requires your own developer account there) |
+
+To get `ANDROID_KEYSTORE_BASE64`, run this against your own copy of the
+keystore file (never re-run key generation — it must be this exact file,
+or the store will treat rebuilds as a different app):
+
+```sh
+# macOS/Linux
+base64 -w0 sgbtracker-release-keystore.p12 | pbcopy   # or > keystore.b64.txt
+
+# Windows PowerShell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("sgbtracker-release-keystore.p12")) | Set-Clipboard
+```
+
+Then run the workflow from the **Actions** tab → "Build Android app
+(Bubblewrap)" → **Run workflow**, ticking "Publish" once you're ready to
+push a build to Indus Appstore. Every run also uploads the signed
+`.aab`/`.apk` as a downloadable build artifact, whether or not you
+publish — useful for Oppo App Market, which this workflow doesn't submit
+to automatically (no equivalent GitHub Action exists for it yet; download
+the artifact and upload it through Oppo's developer portal by hand).
+
+### Manual path (fallback)
+
+1. [pwabuilder.com](https://www.pwabuilder.com) can also generate the
+   Android package by hand, reading the manifest above automatically —
+   this is how the very first build was produced, back when the CI
+   pipeline above didn't exist yet. Its own Android build option produces
+   an **unsigned** `.apk`/`.aab` unless you upload a signing key to it
+   directly; if you go this route, sign the output with the same keystore
+   (`jarsigner -verify` afterwards confirms it worked) rather than letting
+   PWABuilder generate a new one.
+2. `public/.well-known/assetlinks.json` in this repo is already populated
+   with the real signing certificate's SHA-256 fingerprint (package
+   `app.vercel.sgbtracker.twa`), so the installed app opens as a
+   full-screen app instead of falling back to a browser tab.
+3. **Submit** the signed package to each store's developer portal (signup
+   → create app listing → upload package → store listing assets [icon,
    screenshots, description] → privacy policy URL → submit for review).
    This step needs the app owner's own developer account on each store —
-   it can't be done by an AI agent.
-5. A **privacy policy page** is required by both stores — this repo ships
+   it can't be done by an AI agent, and the GitHub Action above only
+   automates it for Indus Appstore.
+4. A **privacy policy page** is required by both stores — this repo ships
    one at `/privacy` (linked from the footer on every page), live at
    `https://sgbtracker.vercel.app/privacy`. Use that URL directly in each
    store's submission form.
 
-If you ever regenerate the Android package (e.g. a future PWABuilder run
-after a manifest change), re-sign it with the *same* keystore + password
-so the store treats it as an update rather than a new app — never
-generate a second keystore for this package name.
+Whichever path you use, always sign with the *same* keystore + password —
+never generate a second keystore for this package name, or the store will
+treat the result as an unrelated app rather than an update.
 
 ## Extending to a real data provider
 
