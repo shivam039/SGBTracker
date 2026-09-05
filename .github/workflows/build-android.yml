@@ -46,7 +46,20 @@ jobs:
         run: npm install -g @bubblewrap/cli
 
       - name: Point Bubblewrap at the runner's JDK/SDK (skip interactive wizard)
-        run: bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
+        # `bubblewrap updateConfig` itself triggers the interactive first-run
+        # wizard ("Do you want Bubblewrap to install the JDK?") before it
+        # processes any flags, since it runs unconditionally whenever
+        # ~/.bubblewrap/config.json doesn't exist yet — writing that file
+        # directly is the only way to skip it in a non-interactive shell.
+        run: |
+          mkdir -p "$HOME/.bubblewrap"
+          cat > "$HOME/.bubblewrap/config.json" <<CONFIG
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          CONFIG
+          cat "$HOME/.bubblewrap/config.json"
 
       - name: Decode signing keystore
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > signing.keystore
