@@ -14,3 +14,4 @@ instead of scrolling off a terminal and being forgotten.
 - 2026-09-05T17:27:22.861Z | author: Claude <noreply@anthropic.com> | bypassed: Protected path violation: .github/workflows/build-android.yml
 - 2026-09-05T17:28:57.850Z | author: Claude <noreply@anthropic.com> | bypassed: Protected path violation: .github/workflows/build-android.yml
 - 2026-09-05T17:32:47.887Z | author: Claude <noreply@anthropic.com> | bypassed: Protected path violation: .github/workflows/build-android.yml
+- 2026-09-05T17:36:45.760Z | author: Claude <noreply@anthropic.com> | bypassed: Protected path violation: .github/workflows/build-android.yml
