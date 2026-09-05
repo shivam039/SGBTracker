@@ -16,6 +16,38 @@ have to re-derive it from scratch by reading git history.
 
 <!-- Entries go below this line, newest first. -->
 
+### 2026-09-05 — Capture app-store screenshots in GitHub Actions too
+
+**Decision:** Added `.github/workflows/screenshots.yml` (manual trigger)
+running `scripts/capture-screenshots.mjs`, a Playwright script that visits
+the live `sgbtracker.vercel.app` and screenshots the dashboard (narrow +
+wide) and alerts page (narrow) at fixed 1080×1920 / 1280×800 pixel sizes,
+commits them to `public/screenshots/`, and uploads them as a workflow
+artifact. Wired the three into `app/manifest.ts`'s `screenshots` field.
+
+**Why:** Same root cause as the Android build decision below — this
+sandbox has no path to a real, data-backed render of the app to
+screenshot (no database connectivity here), so a script run locally
+during development could only ever capture an error page or empty
+shell. GitHub Actions runners can reach the live deployed site over
+normal internet, so screenshot capture belongs there, following the same
+pattern already established for the Android build. Committing under
+guardrails bypass, same standing approval as the Android CI work — the
+user asked for "screenshots ... via pipeline" directly.
+
+Indus Appstore's own listing form takes screenshots by manual upload, not
+via the same API used for AAB uploads, so the workflow artifact (not just
+the manifest copies) is what actually gets used there.
+
+**Rejected:**
+- *Generate placeholder/mockup screenshots instead* — would misrepresent
+  the actual product in a store listing; not worth the shortcut when a
+  real capture is one workflow away.
+- *Trigger on every push to main* — screenshots would drift with the
+  mock data's daily price walk and generate a commit on every deploy;
+  store-listing screenshots don't need to be that fresh, so left as
+  manual (`workflow_dispatch`) only.
+
 ### 2026-09-04 — Build the Android package in GitHub Actions, not locally
 
 **Decision:** Added `.github/workflows/build-android.yml`, which runs
