@@ -11,7 +11,7 @@
   "navigationDividerColor": "#14181f",
   "navigationDividerColorDark": "#14181f",
   "backgroundColor": "#f7f8fa",
-  "enableNotifications": false,
+  "enableNotifications": true,
   "startUrl": "/",
   "iconUrl": "https://sgbtracker.vercel.app/icons/icon-512.png",
   "maskableIconUrl": "https://sgbtracker.vercel.app/icons/icon-512-maskable.png",
