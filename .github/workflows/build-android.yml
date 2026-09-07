@@ -27,6 +27,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -91,6 +94,29 @@ jobs:
           # answering yes is exactly what's needed here, since no scaffold
           # exists yet.
           printf 'y\n' | bubblewrap build --skipPwaValidation
+
+      - name: Persist the auto-bumped version back to the repo
+        # Every build here starts from a fresh checkout, so without this,
+        # Bubblewrap's own version auto-increment (it bumps
+        # android/twa-manifest.json's appVersionCode on each build, since
+        # there's no checksum file to tell it a build already happened —
+        # see the "answer y" step above) never survives past the job that
+        # produced it: the *next* run starts from the same committed
+        # version again and produces an identical versionCode. That silently
+        # produced several duplicate-versionCode builds in a row before
+        # this step existed, which Indus Appstore then rejected as
+        # "version already present" on upload. Committing the file back
+        # closes the loop so each build's version is genuinely unique.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add android/twa-manifest.json
+          if git diff --cached --quiet; then
+            echo "Version unchanged."
+          else
+            git commit -m "Bump Android app version (automated, from Bubblewrap build)"
+            git push
+          fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

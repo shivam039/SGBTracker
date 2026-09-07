@@ -20,8 +20,8 @@
     "path": "./signing.keystore",
     "alias": "sgbtracker"
   },
-  "appVersionName": "1",
-  "appVersionCode": 1,
+  "appVersionName": "3",
+  "appVersionCode": 3,
   "shortcuts": [
     { "name": "Dashboard", "shortName": "Dashboard", "url": "/", "chosenIconUrl": "https://sgbtracker.vercel.app/icons/icon-192.png" },
     { "name": "Alerts", "shortName": "Alerts", "url": "/alerts", "chosenIconUrl": "https://sgbtracker.vercel.app/icons/icon-192.png" }
@@ -41,5 +41,5 @@
   ],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
-  "appVersion": "1"
+  "appVersion": "3"
 }
